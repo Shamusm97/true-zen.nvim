@@ -1,23 +1,15 @@
 local M = {}
 
 local echo = require("true-zen.utils.echo")
-local cnf = require("true-zen.config").options
+local config = require("true-zen.config").options
 local colors = require("true-zen.utils.colors")
 local data = require("true-zen.utils.data")
-local api = vim.api
-local cmd = vim.cmd
-local fn = vim.fn
-local wo = vim.wo
-local b = vim.b
-local o = vim.o
-local FOLDS_STYLE = cnf.modes.narrow.folds_style
+local FOLDS_STYLE = config.modes.narrow.folds_style
 
 vim.g.active_buffs = 0
 local original_opts = {}
 
-api.nvim_create_augroup("TrueZenNarrow", {
-	clear = true,
-})
+vim.api.nvim_create_augroup("TrueZenNarrow", {})
 
 function M.custom_folds_style()
 	if type(FOLDS_STYLE) == "function" then
@@ -27,21 +19,21 @@ function M.custom_folds_style()
 		local fold_count = v.foldend - v.foldstart + 1
 		local prefix = "   " .. fold_count
 		local separator = "   "
-		return prefix .. separator .. fn.getline(v.foldstart)
+		return prefix .. separator .. vim.fn.getline(v.foldstart)
 	end
 	return ""
 end
 
 local function save_buff_settings()
-	original_opts.foldenable = wo.foldenable
-	original_opts.foldmethod = wo.foldmethod
-	original_opts.foldminlines = wo.foldminlines
-	original_opts.foldtext = wo.foldtext
-	original_opts.fillchars = wo.fillchars
+	original_opts.foldenable = vim.wo.foldenable
+	original_opts.foldmethod = vim.wo.foldmethod
+	original_opts.foldminlines = vim.wo.foldminlines
+	original_opts.foldtext = vim.wo.foldtext
+	original_opts.fillchars = vim.wo.fillchars
 end
 
 local function normalize_line(line, mode)
-	local pline = (mode == "head" and vim.fn.foldclosed(line) or vim.fn.foldclosedend(line))
+	local pline = (mode == "head" and vim.fn.foldclosed(line) or vim.vim.fn.foldclosedend(line))
 	return (pline > 0 and pline or line)
 end
 
@@ -50,7 +42,7 @@ function M.on(line1, line2)
 
 	local beg_line = normalize_line(line1, "head")
 	local end_line = normalize_line(line2, "tail")
-	local curr_pos = fn.getpos(".")
+	local curr_pos = vim.fn.getpos(".")
 
 	if vim.g.active_buffs <= 0 then
 		save_buff_settings()
@@ -64,28 +56,28 @@ function M.on(line1, line2)
 		}
 	end
 
-	b.tz_narrowed_buffer = true
-	wo.foldenable = true
-	wo.foldmethod = "manual"
-	wo.foldminlines = 0
+	vim.b.tz_narrowed_buffer = true
+	vim.wo.foldenable = true
+	vim.wo.foldmethod = "manual"
+	vim.wo.foldminlines = 0
 
-	cmd("normal! zE")
+	vim.cmd("normal! zE")
 
 	if beg_line > 1 then
-		cmd([[execute '1,' (]] .. beg_line .. [[ - 1) 'fold']])
+		vim.cmd([[execute '1,' (]] .. beg_line .. [[ - 1) 'fold']])
 	end
 
-	if end_line < fn.line("$") then
-		cmd([[execute (]] .. end_line .. [[ + 1) ',$' 'fold']])
+	if end_line < vim.fn.line("$") then
+		vim.cmd([[execute (]] .. end_line .. [[ + 1) ',$' 'fold']])
 	end
 
-	wo.foldtext = 'v:lua.require("true-zen.narrow").custom_folds_style()'
-	fn.setpos(".", curr_pos)
-	cmd("normal! zz")
+	vim.wo.foldtext = 'v:lua.require("true-zen.narrow").custom_folds_style()'
+	vim.fn.setpos(".", curr_pos)
+	vim.cmd("normal! zz")
 
-	if cnf.modes.narrow.run_ataraxis == true then
-		if cnf.modes.ataraxis.quit_untoggles == true then
-			api.nvim_create_autocmd({ "QuitPre" }, {
+	if config.modes.narrow.run_ataraxis == true then
+		if config.modes.ataraxis.quit_untoggles == true then
+			vim.api.nvim_create_autocmd({ "QuitPre" }, {
 				callback = function()
 						M.off()
 				end,
@@ -97,7 +89,7 @@ function M.on(line1, line2)
 		end
 	end
 
-	wo.fillchars = (o.fillchars ~= "" and o.fillchars .. "," or "") .. "fold: "
+	vim.wo.fillchars = (vi.o.fillchars ~= "" and vi.o.fillchars .. "," or "") .. "fold: "
 
 	vim.g.active_buffs = vim.g.active_buffs + 1
 	data.do_callback("narrow", "open", "pos")
@@ -107,28 +99,28 @@ function M.off()
 	data.do_callback("narrow", "close", "pre")
 
 	vim.g.active_buffs = (vim.g.active_buffs > 0 and vim.g.active_buffs or 1) - 1
-	b.tz_narrowed_buffer = nil
+	vim.b.tz_narrowed_buffer = nil
 
-	if cnf.modes.narrow.run_ataraxis == true then
+	if config.modes.narrow.run_ataraxis == true then
 		if vim.g.active_buffs <= 0 then
 			require("true-zen.ataraxis").off()
 		end
 	end
 
-	local curr_pos = fn.getpos(".")
+	local curr_pos = vim.fn.getpos(".")
 
-	if wo.foldmethod ~= "manual" then
-		echo("'vim.wo.foldmethod' must be set to \"manual\"", "error")
+	if vim.wo.foldmethod ~= "manual" then
+		echo("'vim.vim.wo.foldmethod' must be set to \"manual\"", "error")
 	else
-		cmd("normal! zE")
+		vim.cmd("normal! zE")
 	end
 
-	cmd("normal! zz")
-	fn.setpos(".", curr_pos)
+	vim.cmd("normal! zz")
+	vim.fn.setpos(".", curr_pos)
 
 	for k, v in pairs(original_opts) do
 		if k ~= "highlights" then
-			o[k] = v
+			vi.o[k] = v
 		end
 	end
 
@@ -143,7 +135,7 @@ function M.off()
 end
 
 function M.toggle(line1, line2)
-	if b.tz_narrowed_buffer then
+	if vim.b.tz_narrowed_buffer then
 		M.off()
 	else
 		M.on(line1, line2)

@@ -31,17 +31,21 @@ function M.highlight(group, color, force)
 	end
 end
 
-function M.get_hl(name)
-	local ok, hl = pcall(vim.api.nvim_get_hl_by_name, name, true)
-	if not ok then
-		return
-	end
-	for _, key in pairs({ "foreground", "background", "special" }) do
-		if hl[key] then
-			hl[key] = string.format("#%06x", hl[key])
-		end
-	end
-	return hl
+-- TODO: is this the correct way to do this?
+function M.get_hl_fbs_hex(name)
+	-- Check if the highlight exists
+    local hl = vim.api.nvim_get_hl(0, { name = name })
+    if not hl then return nil end
+
+	-- Get the foreground, background, and special colors
+	-- and convert them to hex format
+    local color_keys = { "foreground", "background", "special" }
+    for _, key in ipairs(color_keys) do
+        if hl[key] then
+            hl[key] = string.format("#%06x", hl[key])
+        end
+    end
+    return hl
 end
 
 ---@param fg string forecrust color
